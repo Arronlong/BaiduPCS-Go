@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/iikira/BaiduPCS-Go/baidupcs"
 	"github.com/iikira/BaiduPCS-Go/pcstable"
+	"github.com/iikira/BaiduPCS-Go/requester"
 	"github.com/olekukonko/tablewriter"
 	"os"
 	"strconv"
@@ -16,8 +17,9 @@ type pcsConfigJSONExport struct {
 
 	AppID int `json:"appid"` // appid
 
-	CacheSize   int `json:"cache_size"`   // 下载缓存
-	MaxParallel int `json:"max_parallel"` // 最大下载并发量
+	CacheSize   int `json:"cache_size"`        // 下载缓存
+	MaxParallel int `json:"max_parallel"`      // 最大下载并发量
+	MaxLoad     int `json:"max_download_load"` // 同时进行下载文件的最大数量
 
 	UserAgent   string `json:"user_agent"`   // 浏览器标识
 	SaveDir     string `json:"savedir"`      // 下载储存路径
@@ -45,6 +47,14 @@ func (c *PCSConfig) BaiduUserList() BaiduUserList {
 	return c.baiduUserList
 }
 
+// HTTPClient 返回设置好的HTTPClient
+func (c *PCSConfig) HTTPClient() *requester.HTTPClient {
+	client := requester.NewHTTPClient()
+	client.SetHTTPSecure(c.enableHTTPS)
+	client.SetUserAgent(c.userAgent)
+	return client
+}
+
 // NumLogins 获取登录的用户数量
 func (c *PCSConfig) NumLogins() int {
 	return len(c.baiduUserList)
@@ -65,6 +75,11 @@ func (c *PCSConfig) MaxParallel() int {
 	return c.maxParallel
 }
 
+// MaxDownloadLoad 返回max_download_load, 同时进行下载文件的最大数量
+func (c *PCSConfig) MaxDownloadLoad() int {
+	return c.maxDownloadLoad
+}
+
 // UserAgent 返回User-Agent
 func (c *PCSConfig) UserAgent() string {
 	return c.userAgent
@@ -80,6 +95,11 @@ func (c *PCSConfig) EnableHTTPS() bool {
 	return c.enableHTTPS
 }
 
+// AverageParallel 返回平均的下载最大并发量
+func (c *PCSConfig) AverageParallel() int {
+	return AverageParallel(c.maxParallel, c.maxDownloadLoad)
+}
+
 // PrintTable 输出表格
 func (c *PCSConfig) PrintTable() {
 	tb := pcstable.NewTable(os.Stdout)
@@ -91,6 +111,7 @@ func (c *PCSConfig) PrintTable() {
 		[]string{"user_agent", c.userAgent, "", "浏览器标识"},
 		[]string{"cache_size", strconv.Itoa(c.cacheSize), "1024 ~ 262144", "下载缓存, 如果硬盘占用高或下载速度慢, 请尝试调大此值"},
 		[]string{"max_parallel", strconv.Itoa(c.maxParallel), "50 ~ 500", "下载最大并发量"},
+		[]string{"max_download_load", strconv.Itoa(c.maxDownloadLoad), "1 ~ 5", "同时进行下载文件的最大数量"},
 		[]string{"savedir", c.saveDir, "", "下载文件的储存目录"},
 	})
 	tb.Render()
